@@ -1,1 +1,1 @@
-# springboot-sns :seedling:
+# springboot-twitter-docs :seedling:
