@@ -97,10 +97,12 @@ public class PostController {
     // 새 게시글 작성
     @PostMapping
     public Post createPost(@RequestBody Post post) {
-        long id = idGenerator.getAndIncrement();
-        post.setId(id);
-        posts.put(id, post);
-        return post;
+        long newId = idGenerator.getAndIncrement();
+        Post newPost = new Post(newId, post.content(), LocalDateTime.now());
+
+        posts.put(newId, newPost);
+
+        return newPost;
     }
 
     // 게시글 수정
@@ -133,12 +135,16 @@ public class PostController {
 #### ResponseEntity 사용
 
 ```java
-@PostMapping("/users")
-public ResponseEntity<User> createUser(@RequestBody User user) {
-    User savedUser = userService.save(user);
+@PostMapping("/posts")
+public ResponseEntity<Post> createPost(@RequestBody Post post) {
+	  long newId = idGenerator.getAndIncrement();
+    Post newPost = new Post(newId, post.content(), LocalDateTime.now());
+
+    posts.put(newId, newPost);
+  
     return ResponseEntity
         .status(HttpStatus.CREATED)
-        .body(savedUser);
+        .body(newPost);
 }
 ```
 위 예시는 ResponseEntity를 사용해 상태 코드를 지정하는 방법입니다.
@@ -149,9 +155,14 @@ public ResponseEntity<User> createUser(@RequestBody User user) {
 
 ```java
 @ResponseStatus(HttpStatus.CREATED)
-@PostMapping("/users")
-public User createUser(@RequestBody User user) {
-    return userService.save(user);
+@PostMapping("/posts")
+public ResponseEntity<Post> createPost(@RequestBody Post post) {
+	  long newId = idGenerator.getAndIncrement();
+    Post newPost = new Post(newId, post.content(), LocalDateTime.now());
+
+    posts.put(newId, newPost);
+  
+    return newPost;
 }
 ```
 - `@ResponseStatus(HttpStatus.CREATED)` 어노테이션을 사용하면, 메서드가 반환될 때 지정한 상태 코드(여기서는 201 Created)로 응답합니다.
@@ -163,67 +174,68 @@ public User createUser(@RequestBody User user) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
----
-
-
-
 ## 3. 요청 데이터 받기
-
-### URL 파라미터 받기 (query string)
-
-```java
-@GetMapping("/search")
-public List<Post> searchPosts(
-    @RequestParam(required = false) String keyword,
-    @RequestParam(defaultValue = "0") int page,
-    @RequestParam(defaultValue = "10") int size
-) {
-    return postService.search(keyword, page, size);
-}
-```
-
-- `@RequestParam`: URL의 쿼리 파라미터를 받습니다.
-- `required = false`: 파라미터가 필수가 아님을 나타냅니다.
-- `defaultValue`: 파라미터가 없을 때의 기본값을 지정합니다.
-
-
 
 ### 경로 변수 받기 (path variable)
 
 ```java
-@GetMapping("/users/{userId}/posts/{postId}")
-public Post getPost(
-    @PathVariable Long userId,
-    @PathVariable Long postId
-) {
-    return postService.findByUserIdAndPostId(userId, postId);
+@GetMapping("/{id}")
+public Post getPost(@PathVariable Long id) {
+    return posts.get(id);
 }
 ```
 
 - `@PathVariable`: URL 경로의 변수 부분을 받습니다.
-- `{userId}`와 `{postId}`는 실제 값으로 대체됩니다.
+- `{id}`는 실제 값으로 대체됩니다.
 
 
 
 ### 요청 본문 받기 (request body)
 
 ```java
-@PostMapping("/posts")
+@PostMapping
 public Post createPost(@RequestBody Post post) {
-    return postService.save(post);
+  ...
 }
 ```
 
 - `@RequestBody`: HTTP 요청의 본문을 객체로 변환합니다.
 - JSON 형식의 데이터를 자동으로 Java 객체로 변환합니다.
+
+
+
+### URL 파라미터 받기 (query string)
+
+예시) 쿠팡에 키보드 검색
+https://www.coupang.com/np/search?q=keyboard
+
+페이지네이션
+
+```java
+@GetMapping("/search")
+public List<Post> searchPosts(
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "3") int size
+) {
+    return posts.values()
+        .stream()
+        .sorted((p1, p2) -> Long.compare(p2.id(), p1.id())) // id 기준 내림차순
+        .skip((long) page * size)
+        .limit(size)
+        .toList();
+}
+```
+
+- `@GetMapping("/search")`: `/search`라는 경로로 GET 요청이 들어오면 실행됩니다.
+- `@RequestParam(defaultValue = "0") int page`: 쿼리 파라미터 중 `page` 값이 없으면 기본값으로 0 을 사용합니다. (첫 페이지)
+- `@RequestParam(defaultValue = "3") int size`: 한 페이지에 3개씩 보여줍니다.
+
+이 API 는 페이지, 사이즈를 입력받으면 해당 범위에 있는 게시물을 조회합니다.
+- `posts.values()` :  `Map<Long, Post>` 타입의 `posts`에서 모든 게시글 (`Post`) 값만 가져옵니다.     
+- `.stream()` : Java Stream API를 이용해 컬렉션을 처리합니다.
+- `.sorted((p1, p2) -> Long.compare(p2.id(), p1.id()))` : `id`를 기준으로 내림차순 정렬합니다. (최근에 만들어진 글이 먼저 오도록)
+- `.skip((long) page * size)` : 페이지 번호에 따라 앞에서부터 건너뜁니다.
+	- 예: `page=1`, `size=3`이면 앞에서 3개 건너뜁니다.
+- `.limit(size)` : 최대 `size` 만큼 결과 추립니다. (한 페이지에 보여줄 게시글 개수).        
+- `.toList()` : 최종적으로 `List<Post>`로 변환해서 반환합니다. (Stream → List)
+

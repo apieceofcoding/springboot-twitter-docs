@@ -20,11 +20,8 @@ Postman은 API를 테스트하기 위한 인기 있는 도구입니다. 다음�
 
      ```json
      {
-       "title": "첫 번째 게시글",
-       "content": "안녕하세요! 이것은 첫 번째 게시글입니다.",
-       "user": {
-         "id": 1
-       }
+       "content": "안녕하세요! 이것은 첫 번째 게시글입니다."
+
      }
      ```
 
@@ -36,7 +33,6 @@ Postman은 API를 테스트하기 위한 인기 있는 도구입니다. 다음�
 
      ```json
      {
-       "title": "수정된 게시글",
        "content": "게시글이 수정되었습니다."
      }
      ```
@@ -61,12 +57,12 @@ curl -X GET http://localhost:8080/api/posts/1
 # 새 게시글 작성
 curl -X POST http://localhost:8080/api/posts \
   -H "Content-Type: application/json" \
-  -d '{"title":"첫 번째 게시글","content":"안녕하세요!","user":{"id":1}}'
+  -d '{"content":"안녕하세요!"}'
 
 # 게시글 수정
 curl -X PUT http://localhost:8080/api/posts/1 \
   -H "Content-Type: application/json" \
-  -d '{"title":"수정된 게시글","content":"게시글이 수정되었습니다."}'
+  -d '{"content":"게시글이 수정되었습니다."}'
 
 # 게시글 삭제
 curl -X DELETE http://localhost:8080/api/posts/1
