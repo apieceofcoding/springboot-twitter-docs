@@ -1,5 +1,7 @@
 .DS_Store
 *.excalidraw
+*.excalidraw.md
 lecture/
 lecture.zip
 .obsidian/
+images/

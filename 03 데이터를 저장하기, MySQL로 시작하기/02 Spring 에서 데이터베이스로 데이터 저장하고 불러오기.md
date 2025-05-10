@@ -27,43 +27,46 @@ JPA는 Java 객체와 데이터베이스 테이블 간의 매핑을 정의하는
 
 **유연한 쿼리 작성**: 메서드 이름만으로 쿼리를 생성할 수 있습니다.
 
-**트랜잭션 관리**: Spring의 트랜잭션 관리 기능을 활용할 수 있습니다.
-
 
 
 ## 2. Spring Boot 프로젝트에 데이터베이스 설정하기
 
 ### 의존성 추가하기
 
-Spring Boot 프로젝트에 데이터베이스 관련 의존성을 추가합니다. `build.gradle` 파일에 다음 의존성을 추가합니다.
+Spring Boot 프로젝트에 데이터베이스 관련 의존성을 추가합니다. `build.gradle.kts` 파일에 다음 의존성을 추가합니다.
 
 ```gradle
 dependencies {
     // Spring Data JPA
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     
-    // 데이터베이스 드라이버 (예: H2, MySQL, PostgreSQL 등)
-    runtimeOnly 'com.h2database:h2'  // H2 데이터베이스
-    // runtimeOnly 'mysql:mysql-connector-java'  // MySQL
+    // H2 데이터베이스 드라이버
+    runtimeOnly("com.h2database:h2")
 }
 ```
 
+
+
+
+
 ### 데이터베이스 연결 설정하기
 
-`application.properties` 또는 `application.yml` 파일에 데이터베이스 연결 정보를 설정합니다:
+`application.yml` 파일 (또는 application.properties) 에 데이터베이스 연결 정보를 설정합니다:
 
-```properties
-# H2 데이터베이스 설정 (개발용)
-spring.datasource.url=jdbc:h2:mem:testdb
-spring.datasource.driverClassName=org.h2.Driver
-spring.datasource.username=sa
-spring.datasource.password=
-spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
-spring.h2.console.enabled=true
-
-# JPA 설정
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  h2:
+    console:
+      enabled: true
 ```
 
 
@@ -72,38 +75,50 @@ spring.jpa.show-sql=true
 
 엔티티 클래스는 데이터베이스 테이블과 매핑되는 Java 클래스입니다. JPA 어노테이션을 사용하여 엔티티를 정의합니다.
 
-### 기본 엔티티 클래스 예시
+### 게시글(Post) 엔티티 클래스 예시
 
 ```java
+@Getter
+@Setter
+@Table(name = "posts")
 @Entity
-@Table(name = "users")
-public class User {
-    
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Post {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(nullable = false, length = 100)
-    private String name;
-    
-    @Column(unique = true, nullable = false)
-    private String email;
-    
-    @Column
+
+    private String content;
+
     private LocalDateTime createdAt;
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
 }
 ```
 
+**JPA 엔티티에서 record를 사용할 수 없습니다.**
+
+- 가변성(Mutability) 필요: JPA는 엔티티의 상태를 관리하기 위해 필드값을 변경할 수 있어야 합니다. 하지만 record는 불변(immutable) 클래스로, 한번 생성되면 필드값을 변경할 수 없습니다.
+- 프록시 생성: JPA는 지연 로딩(lazy loading)을 구현하기 위해 엔티티의 프록시 클래스를 생성합니다. record는 final 클래스이므로 프록시를 생성할 수 없습니다. (프록시는 원본 클래스를 상속하여 만들어집니다. 즉, final 클래스는 상속이 불가능하므로 프록시를 만들 수 없습니다.)
 
 
-### 주요 JPA 어노테이션
+따라서 엔티티는 일반 클래스로 작성해야 합니다. 대신 Lombok의 @Getter, @Setter 등을 사용하여 코드를 간결하게 만들 수 있습니다.
 
-- `@Entity`: 이 클래스가 엔티티임을 나타냅니다.
-- `@Table`: 매핑할 테이블 정보를 지정합니다.
-- `@Id`: 기본키를 지정합니다.
-- `@GeneratedValue`: 기본키 생성 전략을 지정합니다.
-- `@Column`: 컬럼 정보를 지정합니다.
-- `@OneToMany`, `@ManyToOne`, `@OneToOne`, `@ManyToMany`: 관계를 지정합니다.
+
+
+생성자 관련 롬복 어노테이션
+
+- `@AllArgsConstructor` : 모든 필드를 인자로 가지는 생성자를 만듭니다. 직접 정적 메소드로 구현해도 좋습니다만, 편의상 위 어노테이션을 사용했습니다.
+- `@NoArgsConstructor` : 기본 생성자 (파라미터 없는 생성자) 를 만듭니다. `@AllArgsConstructor` 때문에 다른 생성자가 만들어지면, 자바가 기본으로 만들어주는 기본 생성자는 더 이상 만들어지지 않습니다. 하지만, 우리는 JPA 사용을 위해 기본 생성자가 필요하여 이 어노테이션을 추가했습니다.
+- `@Builder` : 원하는 필드로만 구성된 객체를 읽기 쉽고, 실수를 방지할 수 있도록 도와주는 빌더 패턴을 사용할 수 있도록 도와줍니다.
+
+
+
 
 
 
@@ -111,128 +126,80 @@ public class User {
 
 리포지토리는 데이터베이스 접근을 담당하는 인터페이스입니다. Spring Data JPA는 리포지토리 인터페이스를 구현하여 데이터베이스 작업을 수행합니다.
 
-### 기본 리포지토리 인터페이스 예시
+### JPA 저장소 구현체 예시
 
 ```java
-public interface UserRepository extends JpaRepository<User, Long> {
-    // 기본 CRUD 메서드는 JpaRepository에서 제공됩니다.
-    
-    // 메서드 이름으로 쿼리 생성
-    List<User> findByName(String name);
-    Optional<User> findByEmail(String email);
-    
-    // @Query 어노테이션으로 쿼리 정의
-    @Query("SELECT u FROM User u WHERE u.createdAt >= :startDate")
-    List<User> findUsersCreatedAfter(@Param("startDate") LocalDateTime startDate);
+public interface JpaPostRepository extends JpaRepository<Post, Long> {
+  
 }
 ```
 
-
-
-### JpaRepository 인터페이스
-
-JpaRepository는 다음과 같은 기본 CRUD 메서드를 제공합니다:
-
-- `save(entity)`: 엔티티를 저장하거나 업데이트합니다.
-- `findById(id)`: ID로 엔티티를 조회합니다.
-- `findAll()`: 모든 엔티티를 조회합니다.
-- `delete(entity)`: 엔티티를 삭제합니다.
-- `count()`: 엔티티의 개수를 반환합니다.
+위처럼만 해도 사용할 수 있습니다.
 
 
 
-## 5. 서비스(Service) 클래스 만들기
-
-서비스 클래스는 비즈니스 로직을 처리하고 리포지토리를 통해 데이터베이스 작업을 수행합니다.
-
-### 기본 서비스 클래스 예시
+하지만 우리는 자체적으로 PostRepository 인터페이스를 먼저 만들어 놓았기 때문에 이를 사용할 수 있도록 만들어 봅시다.
 
 ```java
-@Service
-@RequiredArgsConstructor
-public class UserService {
-
-    private final UserRepository userRepository;
+public interface JpaPostRepository extends JpaRepository<Post, Long>, PostRepository {
     
-    public User createUser(User user) {
-        user.setCreatedAt(LocalDateTime.now());
-        return userRepository.save(user);
-    }
-    
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-            .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
-    }
-    
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-    
-    public User updateUser(Long id, User userDetails) {
-        User user = getUserById(id);
-        user.setName(userDetails.getName());
-        user.setEmail(userDetails.getEmail());
-        return userRepository.save(user);
-    }
-    
-    public void deleteUser(Long id) {
-        User user = getUserById(id);
-        userRepository.delete(user);
+    @Override
+    default List<Post> findAllPaged(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        return findAll(pageable).getContent();
     }
 }
 ```
 
+- PostRepository 인터페이스 안의 나머지 메소드는 JpaRepository 의 기본 구현체인 `SimpleJpaRepository` 에 이미 다 구현이 되어 있습니다. 따라서 우리는 `findAllPaged` 만 구현하면 됩니다.
+  - save, findAll, findById, deleteById 등
 
 
-## 6. 컨트롤러(Controller)에서 서비스 사용하기
 
-컨트롤러는 클라이언트의 요청을 받아 서비스를 호출하고 결과를 반환합니다.
+## 5. 컨트롤러에서 PostRepository 직접 사용하기
 
-### 기본 컨트롤러 클래스 예시
+이전에 만들어놓았던 PostController 에서 PostRepository 인터페이스를 사용하고 있으므로, PostController 는 변경할 부분이 없습니다.
+
+대신 PostRepository 에 구현한 2개의 구현체 중에 어느 것을 선택할지 결정해주어야 하는데요.
+
+이때는 스프링의 **의존성 주입(DI, Dependency Injection)** 을 사용하면 됩니다. 
 
 ```java
-@RestController
-@RequiredArgsConstructor
-@RequestMapping("/api/users")
-public class UserController {
+@Configuration
+public class RepositoryConfig {
 
-    private final UserService userService;
-    
-    @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        User createdUser = userService.createUser(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
-    }
-    
-    @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        User user = userService.getUserById(id);
-        return ResponseEntity.ok(user);
-    }
-    
-    @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
-    }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
-        User updatedUser = userService.updateUser(id, user);
-        return ResponseEntity.ok(updatedUser);
-    }
-    
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+    @Bean
+    public PostRepository postRepository() {
+        return new InMemoryPostRepository();
     }
 }
 ```
 
+- 위와 같이 `@Configuration` 설정파일을 만들어놓고, `@Bean` 을 통해 특정 클래스를 빈으로 등록해주면 됩니다.
 
 
-## 7. CRUD란 무엇인가요?
+
+만약 JpaPostRepository 로 하고 싶다면 아래와 같이 하면 됩니다.
+
+```java
+@Configuration
+public class RepositoryConfig {
+
+    @Bean
+    public PostRepository postRepository(JpaPostRepository jpaPostRepository) {
+        return jpaPostRepository;
+    }
+}
+```
+
+- 우리가 만든 JpaPostRepository 인터페이스는 `JpaRepository` 인터페이스를 상속 받고 있고, 이 인터페이스의 기본 구현체가 `SimpleJpaRepository` 입니다. 그리고 스프링 자동설정에 의해 이미 빈으로 등록되어 있습니다.
+- 따라서 JPA 가 제공하는 위 구현체를 사용하려면, 파라미터로 JpaPostRepository 를 넣어주고 그대로 반환해주면 됩니다.
+
+
+
+
+
+## 6. CRUD란 무엇인가요?
 
 CRUD는 데이터베이스에서 수행하는 기본적인 데이터 조작 작업의 약자입니다.
 
@@ -243,82 +210,23 @@ CRUD는 데이터베이스에서 수행하는 기본적인 데이터 조작 작�
 
 Spring Data JPA를 사용하면 이러한 CRUD 작업을 매우 간단하게 구현할 수 있습니다. 위에서 살펴본 `JpaRepository` 인터페이스는 이러한 기본적인 CRUD 작업을 위한 메서드를 모두 제공합니다.
 
-우리도 위 User 예제 에서 CRUD 를 이미 모두 만들었습니다.
+우리도 위 Post 예제 에서 CRUD 를 이미 모두 만들었습니다.
 
 
 
-## 8. API 테스트하기
+## 7. H2 Database
 
-개발한 API를 테스트하는 방법은 여러 가지가 있습니다. 여기서는 `curl` 명령어를 사용한 테스트 방법을 소개합니다. 
+http://localhost:8080/h2-console
 
-Postman 에 등록하셔도 무방합니다. 또는 IntelliJ 다 Swagger 다른 방법을 이용할 수도 있습니다.
+브라우저를 통해 위 주소에 들어가면, H2 database 를 시각적으로 조회하고 제어해볼 수 있습니다.
 
-
-
-### 사용자 생성 (Create)
-
-```bash
-curl -X POST http://localhost:8080/api/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "홍길동",
-    "email": "hong@example.com"
-  }'
-```
+- JDBC URL 이 `jdbc:h2:mem:testdb` 이 맞는지 꼭 확인하고 Connect 버튼을 눌러주세요.
 
 
 
-### 사용자 조회 (Read)
+들어가서 데이터베이스를 조회, 생성, 삭제, 수정해봅시다.
 
-특정 사용자 조회:
-```bash
-curl -X GET http://localhost:8080/api/users/1
-```
-
-모든 사용자 조회:
-```bash
-curl -X GET http://localhost:8080/api/users
-```
-
-
-
-### 사용자 정보 수정 (Update)
-
-```bash
-curl -X PUT http://localhost:8080/api/users/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "한조각",
-    "email": "han.updated@example.com"
-  }'
-```
-
-
-
-### 사용자 삭제 (Delete)
-
-```bash
-curl -X DELETE http://localhost:8080/api/users/1
-```
-
-
-
-### 응답 확인하기
-
-위 명령어들은 서버로부터 응답을 받게 됩니다. 실제 실행해보고 해당 요청이, 어울리는 응답이 왔는지 확인해보세요.
-
-- 생성 성공: HTTP 201 Created
-- 조회 성공: HTTP 200 OK
-- 수정 성공: HTTP 200 OK
-- 삭제 성공: HTTP 204 No Content
-
-오류가 발생한 경우에는 다음과 같은 상태 코드를 받을 수 있습니다. 오류는 강제로 만들어서 테스트 해볼 수 있습니다. 언제 아래와 같은 예외가 나오는지 파악해두면, 실제 운영 상황에서 빠르게 대처할 수 있는 노하우를 얻어낼 수 있습니다.
-
-- 잘못된 요청: HTTP 400 Bad Request
-- 인증 실패: HTTP 401 Unauthorized
-- 권한 없음: HTTP 403 Forbidden
-- 리소스 없음: HTTP 404 Not Found
-- 서버 오류: HTTP 500 Internal Server Error
+H2 DB 는 간단한 인메모리 저장소이지만, 이렇게 사용자 편의 기능까지 제공하여 개발용으로 많이 사용됩니다.
 
 
 

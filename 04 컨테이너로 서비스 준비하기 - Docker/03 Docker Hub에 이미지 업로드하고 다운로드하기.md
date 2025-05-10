@@ -12,7 +12,7 @@ Docker Hub는 Docker 이미지를 공유하고 다운로드할 수 있는 공개
 
 **이미지 저장소**: Docker 이미지를 저장하고 관리할 수 있습니다.
 
-**자동 빌드**: GitHub, Bitbucket 등의 저장소와 연동하여 코드 변경 시 자동으로 이미지를 빌드할 수 있습니다.
+**자동 빌드**: GitHub 등의 저장소와 연동하여 코드 변경 시 자동으로 이미지를 빌드할 수 있습니다.
 
 **팀 협업**: 팀원들과 이미지를 공유하고 협업할 수 있습니다.
 
@@ -48,9 +48,8 @@ Docker Hub에 이미지를 업로드하기 전에 적절한 태그를 지정해�
 
 ```
 [사용자명]/[이미지명]:[태그]
+apiece/springboot-twitter:latest
 ```
-
-예: `apiece/springboot-twitter:latest`
 
 
 
@@ -112,14 +111,17 @@ docker pull piece/springboot-twitter:latest
 ### Pull 시 주의사항
 
 - 태그를 지정하지 않으면 `latest` 태그가 기본값으로 사용됩니다.
-- 특정 버전의 이미지를 사용하려면 명시적으로 태그를 지정하세요.
-- 네트워크 연결이 안정적이어야 합니다.
+- 특정 버전의 이미지를 사용하려면 명시적으로 태그를 지정해야 합니다.
 
 
 
-## 6. 비공개 저장소 사용하기
 
-### 비공개 저장소 생성
+
+# 6. private(비공개) 저장소 사용하기
+
+docker hub 는 현재 1개의 private repository 를 무료로 사용 가능합니다.
+
+### private 저장소 생성
 
 1. Docker Hub 웹사이트에서 "Create Repository" 버튼을 클릭합니다.
 2. 저장소 이름을 입력하고 "Private" 옵션을 선택합니다.
@@ -127,7 +129,7 @@ docker pull piece/springboot-twitter:latest
 
 
 
-### 비공개 저장소 사용
+### private 저장소 사용
 
 ```bash
 # 비공개 저장소에 이미지 푸시
@@ -139,36 +141,4 @@ docker pull apiece/private-twitter:latest
 
 
 
-### 팀 협업
-
-1. Docker Hub 웹사이트에서 저장소 설정으로 이동합니다.
-2. "Collaborators" 탭을 선택합니다.
-3. 팀원의 Docker Hub 사용자 이름을 추가합니다.
-
-
-
-## 7. 자동 빌드 설정하기
-
-### GitHub 저장소 연동
-
-1. Docker Hub 웹사이트에서 "Create Repository" 버튼을 클릭합니다.
-2. "Build Settings" 탭을 선택합니다.
-3. "Link to GitHub" 버튼을 클릭하여 GitHub 계정을 연동합니다.
-4. 빌드할 저장소를 선택합니다.
-
-
-
-### 빌드 규칙 설정
-
-1. "Build Rules" 섹션에서 "Add Build Rule" 버튼을 클릭합니다.
-2. 소스 브랜치와 Docker 태그를 지정합니다.
-3. Dockerfile 위치를 지정합니다 (기본값은 루트 디렉토리).
-4. "Save Changes" 버튼을 클릭하여 설정을 저장합니다.
-
-
-
-### 자동 빌드 트리거
-
-- GitHub 저장소에 코드를 푸시하면 자동으로 Docker Hub에서 이미지가 빌드됩니다.
-- 빌드 상태는 Docker Hub 웹사이트에서 확인할 수 있습니다.
 
