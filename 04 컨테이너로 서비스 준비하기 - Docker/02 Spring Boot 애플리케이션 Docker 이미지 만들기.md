@@ -50,6 +50,20 @@ java -jar build/libs/springboottwitter-0.0.1-SNAPSHOT.jar
 
 
 
+우리는 실행가능한 JAR 즉, fat jar 만 필요하니 일반 JAR 는 생성하지 않게 해봅시다.
+
+```build.gradle.kts
+tasks.jar {
+    enabled = false
+}
+```
+
+- `jar` 태스크를 비활성화하여 일반 jar 는 만들어지지 않게 합니다.
+
+
+
+
+
 # 2. Dockerfile 작성하기
 
 Dockerfile은 Docker 이미지를 빌드하기 위한 규칙이 포함된 텍스트 파일입니다. 
@@ -76,6 +90,8 @@ EXPOSE 8080
 # 애플리케이션 실행
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
+
+
 
 
 
@@ -117,12 +133,13 @@ mysql 컨테이너가 띄워진 상황에서 spring boot 컨테이너를 실행�
 
 # 5. Docker compose 로 두 컨테이너 함께 실행하기
 
+**docker-compose.yaml**
+
 ```yaml
 services:
   springboot-twitter:
     container_name: springboot-twitter
     image: springboot-twitter:latest
-    build: .
     ports:
       - "8080:8080"
     environment:
@@ -183,3 +200,51 @@ networks:
 
 - `networks`에서는 `twitter-network`라는 사용자 정의 네트워크를 정의합니다.
 - `driver: bridge`는 `bridge` 네트워크 드라이버를 사용하여, 컨테이너들이 동일 네트워크 내에서 서로 통신할 수 있도록 설정합니다.
+
+
+
+이제 아래 명령어로 도커 컴포즈를 실행해봅시다.
+
+```bash
+docker-compose up -d
+```
+
+- docker-compose 는 docker desktop 설치시 같이 설치됩니다.
+- `-d` 는 백그라운드 실행옵션입니다.
+
+
+
+
+
+
+
+### 여전히 springboot-twitter 가 실행 실패할 경우
+
+depends_on 옵션 덕분에 mysql-twitter, springboot-twitter 컨테이너 순으로 실행되는 것은 맞습니다.
+
+하지만 mysql-twitter 컨테이너가 완전히 실행되고 나서 springboot-twitter 가 실행하는 것을 보장하는 것은 아닙니다.
+
+따라서 이 경우 간단한 조치로 springboot-twitter 가 임시로 몇초간 대기 후 실행하도록하여 해결해봅시다.
+
+이는 임시적인 해결책일 뿐 실제 운영에서는 이보다는 다른 방법을 추천드립니다, 저희는 개발 테스트환경이므로 이렇게 진행해보겠습니다.
+
+**Dockerfile 수정**
+
+```Docker
+ENTRYPOINT ["sh", "-c", "sleep 10 && java -jar app.jar"]
+```
+
+**이미지 다시 빌드**
+
+```bash
+docker build -t springboot-twitter:latest .
+```
+
+**도커 컴포즈 실행**
+
+```bash
+docker-compose up -d
+```
+
+
+

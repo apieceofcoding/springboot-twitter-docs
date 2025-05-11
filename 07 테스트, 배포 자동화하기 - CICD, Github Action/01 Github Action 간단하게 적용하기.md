@@ -119,6 +119,38 @@ jobs:
 
 
 
+### GitHub Actions 시크릿 설정하기
+
+GitHub Actions에서 민감한 정보(예: API 키, 비밀번호)를 사용할 때는 시크릿을 사용해야 합니다. 시크릿은 GitHub 저장소의 설정에서 설정할 수 있습니다.
+
+**GitHub 시크릿 설정 방법**
+
+1. GitHub 저장소로 이동합니다.
+2. "Settings" 탭을 클릭합니다.
+3. 왼쪽 사이드바에서 "Secrets and variables" > "Actions"를 클릭합니다.
+4. "New repository secret" 버튼을 클릭합니다.
+5. 시크릿 이름과 값을 입력하고 "Add secret" 버튼을 클릭합니다.
+
+
+
+**워크플로우에서 시크릿 사용하기**
+
+워크플로우 파일에서 시크릿을 사용하려면 `${{ secrets.SECRET_NAME }}` 형식을 사용합니다:
+
+```yaml
+- name: Login to Docker Hub
+  uses: docker/login-action@v2
+  with:
+    username: ${{ secrets.DOCKER_HUB_USERNAME }}
+    password: ${{ secrets.DOCKER_HUB_TOKEN }}
+```
+
+
+
+
+
+
+
 ### GitHub Actions로 Docker 이미지 빌드 및 푸시하기
 
 GitHub Actions를 사용하여 Docker 이미지를 빌드하고 Docker Hub에 푸시할 수 있습니다:
@@ -162,7 +194,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/springboot-twitter:latest
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/springboot-twitter-linux:latest
 ```
 
 이 워크플로우는 다음과 같은 작업을 수행합니다:
@@ -176,175 +208,91 @@ jobs:
 
 
 
-### GitHub Actions로 클라우드 서비스에 배포하기
 
-GitHub Actions를 사용하여 클라우드 서비스(예: AWS, Azure, Google Cloud)에 애플리케이션을 배포할 수 있습니다. 다음은 AWS Elastic Beanstalk에 배포하는 예시입니다:
+
+## 4. GitHub Actions로 클라우드 서비스에 배포하기 (EC2 + Docker)
+
+Docker Hub에 이미지를 올려두고, AWS EC2에서 이미지를 pull하여 배포 및 실행하는 자동화 방법을 소개합니다.
+
+### 준비 사항
+- EC2 인스턴스에 Docker, Docker-compose 가 설치되어 있어야 합니다.
+- EC2 인스턴스에 접속할 수 있는 SSH 키가 있어야 합니다.
+- EC2 인스턴스의 보안그룹에서 22(SSH), 8080(서비스 포트) 등이 열려 있어야 합니다.
+- GitHub 저장소의 시크릿에 아래 정보를 등록해야 합니다:
+  - `EC2_HOST`: EC2 퍼블릭 IP 또는 도메인
+  - `EC2_USER`: EC2에 접속할 사용자명 (예: ec2-user, ubuntu 등)
+  - `EC2_KEY`: EC2에 접속할 PEM 키 (private key, 여러 줄 입력 가능)
+
+### 워크플로우 (docker-compose로 배포 단계 추가)
 
 ```yaml
-name: Deploy to AWS Elastic Beanstalk
+name: Build, Push, and Deploy to EC2 (docker-compose)
 
 on:
   push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up JDK 21
-      uses: actions/setup-java@v3
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        
-    - name: Build with Gradle
-      run: ./gradlew build
-      
-    - name: Generate deployment package
-      run: zip -r deploy.zip . -x "*.git*"
-      
-    - name: Deploy to EB
-      uses: einaregilsson/beanstalk-deploy@v21
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: springboot-twitter
-        environment_name: production
-        region: us-east-1
-        deployment_package: deploy.zip
-```
-
-이 워크플로우는 다음과 같은 작업을 수행합니다:
-
-1. 코드를 체크아웃합니다.
-2. JDK 21을 설정합니다.
-3. Gradle을 사용하여 프로젝트를 빌드합니다.
-4. 배포 패키지를 생성합니다.
-5. AWS Elastic Beanstalk에 배포합니다.
-
-
-
-## 4. GitHub Actions 시크릿 설정하기
-
-GitHub Actions에서 민감한 정보(예: API 키, 비밀번호)를 사용할 때는 시크릿을 사용해야 합니다. 시크릿은 GitHub 저장소의 설정에서 설정할 수 있습니다.
-
-### GitHub 시크릿 설정 방법
-
-1. GitHub 저장소로 이동합니다.
-2. "Settings" 탭을 클릭합니다.
-3. 왼쪽 사이드바에서 "Secrets and variables" > "Actions"를 클릭합니다.
-4. "New repository secret" 버튼을 클릭합니다.
-5. 시크릿 이름과 값을 입력하고 "Add secret" 버튼을 클릭합니다.
-
-
-
-### 워크플로우에서 시크릿 사용하기
-
-워크플로우 파일에서 시크릿을 사용하려면 `${{ secrets.SECRET_NAME }}` 형식을 사용합니다:
-
-```yaml
-- name: Login to Docker Hub
-  uses: docker/login-action@v2
-  with:
-    username: ${{ secrets.DOCKER_HUB_USERNAME }}
-    password: ${{ secrets.DOCKER_HUB_TOKEN }}
-```
-
-
-
-## 5. GitHub Actions 워크플로우 모니터링하기
-
-GitHub Actions 워크플로우의 실행 상태는 GitHub 저장소의 "Actions" 탭에서 확인할 수 있습니다. 각 워크플로우 실행의 상세 정보를 확인하고, 로그를 확인할 수 있습니다.
-
-### 워크플로우 실행 상태 확인하기
-
-1. GitHub 저장소로 이동합니다.
-2. "Actions" 탭을 클릭합니다.
-3. 워크플로우 실행 목록에서 원하는 실행을 클릭합니다.
-4. 작업 및 단계의 실행 상태를 확인합니다.
-
-### 워크플로우 실행 로그 확인하기
-
-1. 워크플로우 실행 상세 페이지에서 작업을 클릭합니다.
-2. 단계를 클릭하여 로그를 확인합니다.
-
-
-
-
-
-## 6. GitHub Actions 워크플로우 최적화하기
-
-GitHub Actions 워크플로우를 최적화하여 실행 시간을 단축하고 리소스를 절약할 수 있습니다.
-
-### 워크플로우 최적화 팁
-
-1. **캐싱 사용**: Gradle 등의 패키지 매니저 캐싱을 사용하여 빌드 시간을 단축합니다.
-2. **병렬 작업 실행**: 독립적인 작업은 병렬로 실행하여 전체 실행 시간을 단축합니다.
-3. **조건부 실행**: 필요할 때만 작업을 실행하도록 조건을 설정합니다.
-4. **최소한의 단계 사용**: 불필요한 단계를 제거하여 워크플로우를 간소화합니다.
-
-
-
-### 최적화된 워크플로우 예시
-
-```yaml
-name: Optimized Spring Boot CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up JDK 21
-      uses: actions/setup-java@v3
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-        
-    - name: Build and test with Gradle
-      run: ./gradlew build
-      
+      - uses: actions/checkout@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Build with Gradle
+        run: ./gradlew build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/springboot-twitter-linux:latest
+
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy to production
-      run: echo "Deploying to production..."
-      # 실제 배포 명령어 추가
+      - name: Deploy to EC2 via SSH (docker-compose)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            # docker-compose.yml 파일 작성 (혹은 git pull 등으로 복사)
+            cat > docker-compose.yml <<EOF
+            version: '3'
+            services:
+              springboot-twitter:
+                image: ${{ secrets.DOCKER_HUB_USERNAME }}/springboot-twitter-linux:latest
+                container_name: springboot-twitter
+                ports:
+                  - "8080:8080"
+                environment:
+                  - SPRING_DATASOURCE_URL=jdbc:mysql://${{ secrets.RDS-ENDPOINT }}:3306/twitterdb
+                  - SPRING_DATASOURCE_USERNAME=dev
+                  - SPRING_DATASOURCE_PASSWORD=dev123
+            EOF
+            docker-compose pull
+            docker-compose down || true
+            docker-compose up -d
 ```
 
-이 워크플로우는 다음과 같은 최적화를 적용합니다:
+- SSH로 접속 후, docker-compose.yml을 작성(혹은 git pull 등으로 복사)하고, `docker-compose up -d`로 실행합니다.
+- 기존 컨테이너는 `docker-compose down`으로 정리 후 재실행합니다.
+- 환경변수에 RDS 엔드포인트와 DB 정보를 넣어줍니다.
 
-1. Gradle 패키지를 캐싱하여 빌드 시간을 단축합니다.
-2. 빌드와 테스트를 하나의 단계로 통합하여 단계 수를 줄입니다.
-3. 배포 작업은 `main` 브랜치에 푸시할 때만 실행되도록 조건을 설정합니다.
-4. 배포 작업은 빌드 작업이 성공한 후에만 실행되도록 `needs` 키워드를 사용합니다.
-
+이렇게 하면 코드 push → Docker Hub 빌드/업로드 → EC2에서 docker-compose로 자동 배포까지 한 번에 자동화할 수 있습니다.
 
 
-GitHub Actions를 사용하면 Spring Boot 애플리케이션의 CI/CD 파이프라인을 쉽게 구축할 수 있습니다. 이렇게 하면 코드 변경 사항을 자동으로 테스트하고 배포하여 개발 생산성을 향상시키고 품질을 유지할 수 있습니다. 개발자가 배포 명령어나 스크립트를 일일이 실행시키지 않더라도, 자동으로 배포하는 시스템을 만들 수 있습니다.
+

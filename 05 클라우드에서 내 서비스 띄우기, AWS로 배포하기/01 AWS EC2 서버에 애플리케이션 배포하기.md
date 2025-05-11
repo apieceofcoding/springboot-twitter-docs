@@ -20,11 +20,22 @@ AWS 클라우드 서비스를 사용하기 위해서는 먼저 AWS 계정이 필
 
 - 이 계정은 삭제도 어렵고 최고 권한을 가지고 있으므로 MFA(다중 인증) 꼭 해두시길 권장합니다.
 
+
+
+### 과금방지 알림 설정하기
+
+- 루트 사용자를 만들었으면 과금 알림을 설정해놓으면 좋습니다.
+- AWS 프리티어를 사용하더라도 일정 사용치를 넘으면 과금이 될 수 있습니다. 이를 위해 비용 청구에 대해 알림을 설정합니다.
+- 맨 오른쪽 위 계정 버튼 > 결제 및 비용 관리 > 예산 및 계획 > 예산 > `예산 생성` > `제로 지출 예산`
+- 지출이 0.01 USD 초과시 이메일로 알림을 설정합니다.
+
+
+
+### IAM 사용자 생성하기
+
+**IAM(Identity and Access Management)**은 **AWS 리소스에 대한 접근을 안전하게 관리**할 수 있도록 도와주는 서비스입니다.
+
 IAM 계정을 만들고 평소에는 루트사용자 대신 IAM 계정으로 접속하는게 보안에 좋습니다. (AWS 공식 제안사항)
-
-
-
-#### IAM 사용자 생성하기
 
 - AWS 콘솔에서 IAM 서비스 접속
 - 사용자 추가 버튼 클릭
@@ -35,9 +46,17 @@ IAM 계정을 만들고 평소에는 루트사용자 대신 IAM 계정으로 접
 
 
 
+
+
 ## EC2 인스턴스 생성 및 설정
 
 EC2는 AWS의 가상 서버입니다. 우리의 애플리케이션을 호스팅할 EC2 인스턴스를 생성하고 설정하는 방법을 알아보겠습니다.
+
+
+
+먼저 **리전**을 아시아 태평양 서울로 설정합니다.
+
+
 
 1. EC2 인스턴스 생성하기
    - AWS 콘솔에서 EC2 서비스 접속
@@ -65,7 +84,8 @@ EC2 인스턴스에 접속하여 필요한 소프트웨어를 설치하고 환�
 **SSH 접속**
 
 ```bash
-ssh -i your-key.pem ec2-user@your-instance-public-dns
+# ssh -i your-key.pem ec2-user@your-instance-public-dns
+ssh -i "springboot-twitter.pem" ec2-user@ec2-13-125-220-250.ap-northeast-2.compute.amazonaws.com
 ```
 
 앞으로 간단하게 접속하려면 아래 설정을 추가하면 좋습니다.
@@ -75,36 +95,30 @@ ssh -i your-key.pem ec2-user@your-instance-public-dns
 cd ~/.ssh
 
 # pem 파일을 이동시키고
-mv ~/Downloads/test-keypair.pem .
+mv ~/Downloads/springboot-twitter.pem .
 
 # 파일소유자만 읽을 수 있도록 권한을 변경합니다.
-chmod 400 test-keypair.pem
+chmod 400 springboot-twitter.pem
 
 # ~/.ssh/config 파일 편집
 vi config
 
 # vi 편집기 안에서
-Host test
+Host springboot-twitter
   HostName 13.112.173.59
   User ec2-user
-  IdentityFile ~/.ssh/aws/test-keypair.pem
+  IdentityFile ~/.ssh/aws/springboot-twitter.pem
   
 # 이제 :wq! 를 타이핑해서 저장하고 vi 에디터를 종료합니다.
 ```
 
 ```bash
-ssh test
+ssh springboot-twitter
 ```
 
 
 
 
-
-**시스템 업데이트**
-
-```bash
-sudo dnf update -y
-```
 
 **Docker 설치**
 
@@ -116,6 +130,9 @@ sudo systemctl start docker
 
 # Docker 서비스 부팅 시 자동 시작 설정
 sudo systemctl enable docker
+
+# Docker 상태 조회
+sudo systemctl status docker
 ```
 
 
@@ -124,21 +141,6 @@ sudo systemctl enable docker
 >
 > `dnf`는 **Dandified YUM**의 줄임말로,
 >  Red Hat 계열 리눅스(RHEL, CentOS, Fedora, Amazon Linux 등)에서 사용하는 **패키지 관리자**입니다.
-
-
-
-편의를 돕는 부가설정 
-
-```bash
-# 현재 사용자(예: ec2-user)를 docker 그룹에 추가 (sudo 없이 사용 가능하게)
-sudo usermod -aG docker $USER
-
-# 반영을 위해 로그아웃 후 다시 로그인하거나 아래 명령 실행
-newgrp docker
-
-# 설치 확인위해 버전 조회
-docker version
-```
 
 
 
@@ -171,7 +173,7 @@ docker push apiece/springboot-twitter-linux:latest
 **EC2**
 
 ```bash
-ssh test
+ssh springboot-twitter
 ```
 
 ```bash
@@ -189,7 +191,6 @@ services:
       - SPRING_DATASOURCE_PASSWORD=dev123
     depends_on:
       - mysql-twitter
-    command: sh -c "echo ' Waiting for MySQL...' && sleep 10 && exec java -jar app.jar"
     networks:
       - twitter-network
 
@@ -213,7 +214,25 @@ networks:
 
 
 
-스프링부트 및 MySQL 실행
+**Docker Compose 설치하기**
+
+1. Docker Compose는 공식 GitHub에서 바이너리 파일을 직접 다운로드하여 설치합니다.
+    최신 버전 URL을 확인하려면 [Docker Compose Releases](https://github.com/docker/compose/releases)에서 최신 버전을 찾을 수 있어요.
+    여기서는 최신 버전(예: `v2.36.0`)을 설치한다고 가정하겠습니다.
+
+```bash
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# 실행 권한 추가
+sudo chmod +x /usr/local/bin/docker-compose
+
+# 설치 확인
+docker-compose --version
+```
+
+
+
+**스프링부트 및 MySQL 실행**
 
 ```bash
 docker-compose up -d
@@ -339,5 +358,5 @@ docker stats
 - EBS 스냅샷, 백업에도 요금이 청구됩니다.
 - 다른 리전에 리소스가 있는지도 확인해야 합니다. (E2 글로벌 보기)
 - 2024년 2월부터 public IP 주소 과금
-  - EC2 인스턴스에 연결된 공인 IPv4 주소는 무료 (월 750시간)
+  - 단, EC2 인스턴스에 연결된 공인 IPv4 주소는 무료 (월 750시간)
   - Elastic IP 주소나 다른 서비스의 공인 IPv4 주소는 프리 티어 혜택에 포함되지 않습니다.

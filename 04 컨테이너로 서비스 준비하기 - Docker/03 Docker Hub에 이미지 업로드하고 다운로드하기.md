@@ -95,7 +95,7 @@ docker push apiece/springboot-twitter:latest
 ### 이미지 pull (가져오기)
 
 ```bash
-docker pull piece/springboot-twitter:latest
+docker pull apiece/springboot-twitter:latest
 ```
 
 
@@ -138,7 +138,6 @@ docker push apiece/private-twitter:latest
 # 비공개 저장소에서 이미지 풀
 docker pull apiece/private-twitter:latest
 ```
-
 
 
 

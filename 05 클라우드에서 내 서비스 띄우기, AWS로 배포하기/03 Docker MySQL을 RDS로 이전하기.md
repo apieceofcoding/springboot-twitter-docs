@@ -1,30 +1,30 @@
 # 03 Docker MySQL을 RDS로 이전하기
 
+
+
+### 1. 애플리케이션과 데이터베이스 관리
+
+EC2 에서 애플리케이션과 데이터베이스를 동시에 관리할 때
+
+EC2 에 장애가 발생하면 둘 다 문제가 발생할 수 있습니다. 
+
+또한 한정된 EC2 메모리, CPU, Disk 자원을 같이 쓰는 것도 문제가 됩니다.
+
+특히 데이터베이스에 있는 무슨일이 있어도 데이터는 복구가 될 수 있도록 더 특별히 관리를 해주어야 합니다.
+
+이를 위해 EC2 에 있는 애플리케이션과 데이터베이스를 분리해보겠습니다.
+
+
+
+AWS(Amazon Web Services) 는 **AWS RDS**(Amazon Relational Database Service)라는 **관리형 관계형 데이터베이스 서비스를 제공**합니다. 쉽게 말하면, AWS가 **데이터베이스 설치, 유지보수, 백업, 복구, 보안 패치, 스케일링** 같은 귀찮은 작업들을 대신 해주는 서비스라고 보면 됩니다.
+
+
+
+
+
 기존 docker-compose로 관리하던 MySQL 컨테이너를 AWS RDS(MySQL)로 이전하고, 
 
 Spring Boot 서비스가 이를 사용하도록 설정해보도록 하겠습니다.
-
-
-
-## 1. 기존 docker-compose의 MySQL 구조 확인
-
-- `docker-compose.yml` 파일에서 MySQL 관련 설정을 확인합니다.
-- 주로 다음과 같은 설정이 있습니다:
-
-```yaml
-mysql-twitter:
-  container_name: mysql-twitter
-  image: mysql:9.3
-  environment:
-    MYSQL_ROOT_PASSWORD: root123
-    MYSQL_DATABASE: twitterdb
-    MYSQL_USER: dev
-    MYSQL_PASSWORD: dev123
-  ports:
-    - "3306:3306"
-```
-
-
 
 
 
@@ -132,3 +132,22 @@ services:
 
 
 
+**docker-compose 실행**
+
+```bash
+docker-compose up -d
+```
+
+```bash
+# docker 컨테이너 상태 확인
+docker ps
+
+# docker 컨테이너 로그 확인
+docker logs -f springboot-twitter
+```
+
+
+
+이제 API 를 테스트 해보면서 잘 작동이되는지 확인해보세요.
+
+우리는 처음으로 클라우드에 내 애플리케이션을 배포하여 테스트까지 완료했습니다. 앞으로는 트위터 애플리케이션에서 아직 개발되지 않은 다양한 요구사항을 구현하고 배포해보도록 하겠습니다.
