@@ -4,6 +4,58 @@ GitHub Actions는 GitHub에서 제공하는 CI/CD(지속적 통합/지속적 배
 
 
 
+# 0. Profile
+
+스프링 애플리케이션 설정파일을 아래와 같이 변경합니다.
+
+**application.yaml**
+
+```yaml
+spring.profiles.active: dev
+
+---
+spring.config.activate.on-profile: dev
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/twitterdb
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: dev
+    password: dev123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    org.hibernate.orm.jdbc.bind: trace
+
+---
+spring.config.activate.on-profile: prod
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+```
+
+- 로컬(dev 프로파일)에선 편하게 디버깅, 테스트가 가능한 환경을 만들고,
+
+  운영(prod 프로파일)에서는 중요한 정보는 환경변수를 통해 주입하는 등 보안을 강화하고, 로깅 줄이는 등 서비스 안정성을 위한 작업을 할 수 있습니다.
+
+  예를 들어 `spring.datasource.password` 는 애플리케이션 외부에서 환경변수나 JVM 인자로 주입할 수 있습니다.
+
+- `spring.profiles.active: dev`: 기본적으로 dev 프로파일을 지정합니다. 운영환경에서는 `-Dspring.profiles.active=prod` 를 JVM 옵션에 추가하여 운영 설정이 되도록 해야합니다.
+
+
+
+
+
 ## 1. GitHub Actions란?
 
 GitHub Actions는 GitHub 저장소에서 직접 CI/CD 워크플로우를 구축할 수 있게 해주는 도구입니다. 코드를 GitHub에 푸시할 때마다 자동으로 테스트를 실행하고, 필요에 따라 배포까지 진행할 수 있습니다.
