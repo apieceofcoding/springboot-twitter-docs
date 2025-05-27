@@ -146,10 +146,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-twitter:3306/twitterdb
       - SPRING_DATASOURCE_USERNAME=dev
       - SPRING_DATASOURCE_PASSWORD=dev123
-    depends_on:
-      - mysql-twitter
     networks:
       - twitter-network
+    depends_on:
+      - mysql-twitter
 
   mysql-twitter:
     container_name: mysql-twitter
@@ -167,7 +167,6 @@ services:
 networks:
   twitter-network:
     driver: bridge
-
 ```
 
 **spring boot 애플리케이션 컨테이너**
